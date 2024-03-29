@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="amazon_reviews.duckdb" uuid="0a89036f-233b-4811-933c-4669675c50dc">
+      <driver-ref>duckdb</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.duckdb.DuckDBDriver</jdbc-driver>
+      <jdbc-url>jdbc:duckdb:$PROJECT_DIR$/amazon_reviews.duckdb</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>
