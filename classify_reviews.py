@@ -4,6 +4,7 @@ from transformers import pipeline
 import duckdb
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
 from datasets import Dataset
 from transformers.pipelines.pt_utils import KeyDataset
 
@@ -16,15 +17,17 @@ if __name__ == "__main__":
         con = duckdb.connect("amazon_reviews.duckdb")
         amazon_reviews = con.sql("""
             SELECT * FROM amazon_reviews_multilingual_US_v1_00 
-                                WHERE star_rating < 3 AND 
-                                    product_category != 'Books' AND 
-                                    product_category != 'Video' AND 
-                                    product_category != 'Music' AND
-                                    product_category != 'Video Games' AND
-                                    product_category != 'Digital_Music_Purchase' AND
-                                    product_category != 'Digital_Video_Download' AND
-                                    product_category != 'Digital_Ebook_Purchase' AND
-                                LENGTH(review_body) > 100;
+                                        WHERE star_rating == 1 AND 
+                                            product_category != 'Books' AND 
+                                            product_category != 'Video' AND 
+                                            product_category != 'Music' AND
+                                            product_category != 'Video Games' AND
+                                            product_category != 'Digital_Music_Purchase' AND
+                                            product_category != 'Digital_Video_Download' AND
+                                            product_category != 'Digital_Ebook_Purchase' AND
+                                            product_category != 'Video DVD' AND
+                                            helpful_votes > 0 AND
+                                        LENGTH(review_body) > 100;
             """).df()
 
         dataset = Dataset.from_pandas(amazon_reviews.loc[:, ['review_body']])
@@ -74,11 +77,49 @@ if __name__ == "__main__":
     y_axis = (y_axis - y_axis.min()) / (y_axis.max() - y_axis.min()) * 2 - 1
 
     # plot the data
-    # color is based on product_category
-    plt.scatter(x_axis, y_axis, c=final_df['star_rating'], cmap='coolwarm')
+    # color is based on review helpful votes (clamp to 0-10 for better visualization)
+    final_df['helpful_votes'] = final_df['helpful_votes'].clip(0, 10)
+    plt.scatter(x_axis, y_axis, c=final_df['helpful_votes'], cmap='viridis')
     plt.xlabel("Overpriced <-----> Broken or Defective")
     plt.ylabel("Bad Customer Support <-----> Poor Quality")
-    plt.colorbar()
-    plt.title("Amazon PC Reviews")
+    # add label to colorbar
+    plt.colorbar().set_label("Helpful votes")
+    plt.title("Amazon one-star review causes")
+    
+    # set plot size
+    fig = plt.gcf()
+    fig.set_size_inches(12, 12)
 
+    # and to png for easy viewing
+    plt.savefig("charts/one_star_scatterplot.png")
+    
+    # reset plot
+    plt.clf()
+    
+    # plot the data as a bar chart where each product_category is a bar
+    # each sub-bar is the percent of reviews that are labeled as such
+    # for each product_category
+    
+    # get the label with the highest confidence
+    final_df['label'] = final_df[['poor quality', 'broken or defective', 'bad customer support', 'overpriced']].idxmax(axis=1)
+    # group by product_category and label
+    grouped = final_df.groupby(['product_category', 'label']).size().unstack()
+    # normalize by row
+    grouped = grouped.div(grouped.sum(axis=1), axis=0)
+    # plot the data
+    grouped.plot(kind='bar', stacked=False)
+    
+    plt.title("Amazon one-star review causes by product category")
+    plt.ylabel("Percent of reviews in category")
+    plt.xlabel("Product category")
+    plt.legend(title="Label")
+
+    # set plot size
+    fig = plt.gcf()
+    fig.set_size_inches(16, 8)
+    # make sure labels are not cut off
+    plt.xticks(rotation=30, ha='right')
+    plt.tight_layout()
+    
+    plt.savefig("charts/one_star_barplot.png")
     plt.show()

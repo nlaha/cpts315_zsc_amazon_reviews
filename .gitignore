@@ -2,3 +2,4 @@
 *.duckdb
 *.wal
 venv
+*.parquet
